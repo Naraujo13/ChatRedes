@@ -4,22 +4,32 @@ import socket, select
 def broadcast_data (sock, message):
     #Do not send the message to master socket and the client who has send us the message
     i = -1
-    for socket in CONNECTION_LIST:
-        i = i + 1
+    for nickname, socket in CONNECTION_LIST.items():
         if socket != server_socket and socket != sock :
             try :
-                socket.send("\r" + NICKNAME_LIST[i] + " -> " + message + "\n")
+                socket.send(message)
             except :
                 # broken socket connection may be, chat client pressed ctrl+c for example
                 socket.close()
-                NICKNAME_LIST.remove(NICKNAME_LIST[i])
-                CONNECTION_LIST.remove(socket)
- 
+                del CONNECTION_LIST.keys()[CONNECTION_LIST.values().index(socket)]
+
+
+def broadcast_pm(sock, message):
+    # Do not send the message to master socket and the client who has send us the message
+    for nickname, socket in CONNECTION_LIST.items():
+        if socket == sock:
+            try:
+                socket.send(message)
+            except:
+                # broken socket connection may be, chat client pressed ctrl+c for example
+                socket.close()
+                del CONNECTION_LIST.keys()[CONNECTION_LIST.values().index(socket)]
+
+
 if __name__ == "__main__":
      
     # List to keep track of socket descriptors
-    NICKNAME_LIST = []
-    CONNECTION_LIST = []
+    CONNECTION_LIST = {}
     RECV_BUFFER = 4096 # Advisable to keep it as an exponent of 2
     PORT = 5000
      
@@ -30,14 +40,13 @@ if __name__ == "__main__":
     server_socket.listen(10)
  
     # Add server socket to the list of readable connections
-    NICKNAME_LIST.append('server')
-    CONNECTION_LIST.append(server_socket)
+    CONNECTION_LIST['server'] = server_socket
  
     print "Chat server started on port " + str(PORT)
  
     while 1:
         # Get the list sockets which are ready to be read through select
-        read_sockets,write_sockets,error_sockets = select.select(CONNECTION_LIST,[],[])
+        read_sockets,write_sockets,error_sockets = select.select(CONNECTION_LIST.values(),[],[])
  
         for sock in read_sockets:
             #New connection
@@ -45,11 +54,10 @@ if __name__ == "__main__":
                 # Handle the case in which there is a new connection recieved through server_socket
                 sockfd, addr = server_socket.accept()
                 nickname = sockfd.recv(RECV_BUFFER)
-                NICKNAME_LIST.append(nickname)
-                CONNECTION_LIST.append(sockfd)
+                CONNECTION_LIST[nickname] = sockfd
                 print "Client (%s, %s) connected" % addr
                 print "Nickname: " + nickname
-                broadcast_data(sockfd, "[%s:%s] entered room\n" % addr)
+                broadcast_data(sockfd, "\r" + nickname + " entered the room!\n")
              
             #Some incoming message from a client
             else:
@@ -58,15 +66,33 @@ if __name__ == "__main__":
                     #In Windows, sometimes when a TCP program closes abruptly,
                     # a "Connection reset by peer" exception will be thrown
                     data = sock.recv(RECV_BUFFER)
-                    if data:
-                        broadcast_data(sock, data )
-
-                 
+                    sender = CONNECTION_LIST.keys()[CONNECTION_LIST.values().index(sock)]
+                    if '/' not in data :
+                        broadcast_data(sock, "\r" + sender + ": " +  data)
+                    else:
+                        if data == "/list\n":
+                            message = "Users in the room:\n"
+                            for nickname in CONNECTION_LIST.keys():
+                                if nickname != "server":
+                                    message += nickname + "; "
+                            broadcast_pm(sock, "\r" + message + "\n")
+                        elif data == "/quit\n":
+                            broadcast_data(sock, "\r" + sender + " has left the room!\n")
+                            print "Client (%s, %s) disconnected.\n" % addr
+                            sock.close()
+                            del CONNECTION_LIST[sender]
+                        else:
+                            nickname = data.split(" ")
+                            nickname = nickname[0].replace("/", "")
+                            try:
+                                broadcast_pm(CONNECTION_LIST[nickname], "\r\n[PM]" + sender + ": " + data.replace("/" + nickname + " ", "") + "\n")
+                            except:
+                                broadcast_pm(sock, "\rUser not found!\n")
                 except:
                     broadcast_data(sock, "Client (%s, %s) is offline" % addr)
                     print "Client (%s, %s) is offline" % addr
                     sock.close()
-                    CONNECTION_LIST.remove(sock)
+                    del CONNECTION_LIST.keys()[CONNECTION_LIST.values().index(sock)]
                     continue
      
     server_socket.close()

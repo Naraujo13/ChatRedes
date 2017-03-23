@@ -22,3 +22,9 @@ ações maneiras como:
 
 /nomeDoUsuario mensagem - para quando você quiser bater um papo privado
 com aquele(a) brotinho(a).
+
+**************************** ATENÇÃO **************************************
+Devido ao uso do comando select, o Chat do UOL v988.13 NÃO funcionará corre-
+tamente no windows devido a este comando não ser suportado diretamente pela
+biblioteca de sockets do windows.
+***************************************************************************

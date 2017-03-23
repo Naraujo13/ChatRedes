@@ -1,42 +1,56 @@
-import socket   #for sockets
-import sys  #for exit
+import socket, select, string, sys
  
-try:
-    #create an AF_INET, STREAM socket (TCP)
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-except socket.error, msg:
-    print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1]
-    sys.exit();
+def prompt() :
+    sys.stdout.flush()
+    sys.stdout.write('<You> ')
+    sys.stdout.flush()
+
  
-print 'Socket Created'
- 
-host = 'www.google.com'
-port = 80
- 
-try:
-    remote_ip = socket.gethostbyname( host )
- 
-except socket.gaierror:
-    #could not resolve
-    print 'Hostname could not be resolved. Exiting'
-    sys.exit()
+if __name__ == "__main__":
      
-print 'Ip address of ' + host + ' is ' + remote_ip
- 
-#Connect to remote server
-s.connect((remote_ip , port))
- 
-print 'Socket Connected to ' + host + ' on ip ' + remote_ip
- 
-#Send some data to remote server
-message = "GET / HTTP/1.1\r\n\r\n"
- 
-try :
-    #Set the whole string
-    s.sendall(message)
-except socket.error:
-    #Send failed
-    print 'Send failed'
-    sys.exit()
- 
-print 'Message send successfully'
+    if(len(sys.argv) < 4) :
+        print 'Usage : python client.py hostname port nickname'
+        sys.exit()
+     
+    host = sys.argv[1]
+    port = int(sys.argv[2])
+    nickname = sys.argv[3]
+     
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(2)
+     
+    #Realiza a tentativa de conexao a um host
+    try :
+        s.connect((host, port))
+        s.send(nickname)
+        prompt()
+    except :
+        print 'Unable to connect'
+        sys.exit()
+     
+    print 'You connected to the UOL Chat!. Have fun!'
+    prompt()
+     
+    while 1:
+        socket_list = [sys.stdin, s]
+
+        # Como no servidor, busca a lista de sockets prontos para leitura
+        read_sockets, write_sockets, error_sockets = select.select(socket_list , [], [])
+         
+        for sock in read_sockets:
+            # Verifica os sockets que possuem mensagem e trata o recebimento da mensagem
+            # imprimindo a mesma na tela do usuario
+            if sock == s:
+                data = sock.recv(4096)
+                if not data :
+                    print '\nDisconnected from UOL Chat!'
+                    sys.exit()
+                else :
+                    sys.stdout.write(data)
+                    prompt()
+
+            # Caso o socket lido tenha sido o proprio, le a mensagem do console e envia
+            else :
+                msg = sys.stdin.readline()
+                s.send(msg)
+                prompt()

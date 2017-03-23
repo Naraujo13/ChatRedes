@@ -1,9 +1,9 @@
-imPort socket, select
+import socket, select
  
-# Função public_message:
+# Funcao public_message:
 #
-# Envia uma mensagem publica para todos os usuários conectados na sala
-# ignorando o socket do servidor e do usuário que enviou a mensagem
+# Envia uma mensagem publica para todos os usuarios conectados na sala
+# ignorando o socket do servidor e do usuario que enviou a mensagem
 
 def public_message (sock, message):
     for nickname, socket in Connected_Sockets.items():
@@ -15,9 +15,9 @@ def public_message (sock, message):
                 del Connected_Sockets.keys()[Connected_Sockets.values().index(socket)]
 
 
-# Função private_message:
+# Funcao private_message:
 #
-# Envia uma mensagem privada para um usuário conectado na sala
+# Envia uma mensagem privada para um usuario conectado na sala
 
 def private_message(sock, message):
     for nickname, socket in Connected_Sockets.items():
@@ -31,7 +31,7 @@ def private_message(sock, message):
 
 if __name__ == "__main__":
 
-    # Inicializa o dicionário de sockets conectados e parâmtros relativos aos sockets     
+    # Inicializa o dicionario de sockets conectados e paramtros relativos aos sockets
     Connected_Sockets = {}
     receiving_buffer = 4096
     Port = 5000
@@ -42,23 +42,23 @@ if __name__ == "__main__":
     server_socket.bind(("0.0.0.0", Port))
     server_socket.listen(10)
  
-    # Adiciona o socket do servidor ao dicionário de
+    # Adiciona o socket do servidor ao dicionario de sockets/nicknames
     Connected_Sockets['server'] = server_socket
  
     print "UOL Chat started on Port " + str(Port)
  
     while 1:
 
-        # Busca as listas de sockets disponíveis para leitura, escrita e erro.
+        # Busca as listas de sockets disponiveis para leitura, escrita e erro.
         # utiliza os sockets de leitura para leitura das entradas do usuario
-        # e também para recebimento de mensagens
+        # e tambem para recebimento de mensagens
         read_sockets,write_sockets,error_sockets = select.select(Connected_Sockets.values(),[],[])
  
         for sock in read_sockets:
             if sock == server_socket:
-                # Bloco de código resposável pelo tratamento de uma nova conexão
-                # e após estabelecer a conexão envia uma mensagem avisando que o 
-                # usuário se conectou a sala
+                # Bloco de codigo resposavel pelo tratamento de uma nova conexao
+                # e apos estabelecer a conexao envia uma mensagem avisando que o
+                # usuario se conectou a sala
                 sockfd, addr = server_socket.accept()
                 nickname = sockfd.recv(receiving_buffer)
                 Connected_Sockets[nickname] = sockfd
@@ -67,7 +67,7 @@ if __name__ == "__main__":
              
             else:
                 try:
-                    #Caso a conexão não seja nova realiza os tratamentos para recebimento e envio de mensagens
+                    #Caso a conexao nao seja nova realiza os tratamentos para recebimento e envio de mensagens
                     data = sock.recv(receiving_buffer)
                     sender = Connected_Sockets.keys()[Connected_Sockets.values().index(sock)]
                     if '/' not in data :
